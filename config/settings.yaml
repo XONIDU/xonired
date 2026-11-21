@@ -1,0 +1,114 @@
+# red-xonidu v3.1 - Ultra-lightweight Agent Architecture
+# Modelo local (SmolLM2 135M) + APIs externas = Agente Autónomo
+
+system:
+  name: "red-xonidu"
+  version: "3.1.0"
+  language: "es"
+
+  # Detección automática de RAM para elegir cuantización
+  ram_detection: true
+  quantization:
+    low_ram: "Q4_K_M"      # Para 1-2 GB RAM
+    high_ram: "Q8_0"       # Para 4+ GB RAM
+    threshold_gb: 3        # Umbral para cambiar
+
+model:
+  name: "SmolLM2-135M"
+  repo_id: "bartowski/SmolLM2-135M-Instruct-GGUF"
+  filename_q4: "SmolLM2-135M-Instruct-Q4_K_M.gguf"
+  filename_q8: "SmolLM2-135M-Instruct-Q8_0.gguf"
+  local_path: "models/"
+  context_size: 2048
+  threads_auto: true
+  gpu_layers: 0  # Solo CPU
+
+apis:
+  wikipedia:
+    enabled: true
+    base_url: "https://es.wikipedia.org/w/api.php"
+    rate_limit: 30  # req/min
+
+  arxiv:
+    enabled: true
+    base_url: "http://export.arxiv.org/api/query"
+    rate_limit: 10
+
+  weather:
+    enabled: true
+    base_url: "https://api.openweathermap.org/data/2.5"
+    api_key_env: "OPENWEATHER_API_KEY"
+    rate_limit: 60
+
+  news:
+    enabled: true
+    base_url: "https://gnews.io/api/v4"
+    api_key_env: "GNEWS_API_KEY"
+    rate_limit: 100
+
+  duckduckgo:
+    enabled: true
+    base_url: "https://api.duckduckgo.com/"
+    rate_limit: 30
+
+agent:
+  system_prompt: |
+    Eres un asistente IA ultraligero (135M params) que NO almacena conocimiento.
+    Tu función es RAZONAR qué herramienta usar y FORMATEAR la respuesta.
+
+    HERRAMIENTAS DISPONIBLES:
+    - BUSCAR_WIKIPEDIA: [término] - Para definiciones, historia, conceptos
+    - BUSCAR_ARXIV: [término] - Para papers científicos
+    - BUSCAR_CLIMA: [ciudad] - Para información meteorológica
+    - BUSCAR_NOTICIAS: [tema] - Para noticias actuales
+    - BUSCAR_WEB: [término] - Para búsquedas generales
+
+    FLUJO OBLIGATORIO:
+    1. Analiza la pregunta del usuario
+    2. Si NO sabes la respuesta exacta, responde SOLO con la herramienta
+    3. El sistema ejecutará la herramienta y te dará el resultado
+    4. Tú formateas la respuesta final en español
+
+    EJEMPLOS:
+    Usuario: "¿Qué es la computación cuántica?"
+    Tú: BUSCAR_WIKIPEDIA: [computación cuántica]
+
+    Usuario: "¿Va a llover en Cuautitlán?"
+    Tú: BUSCAR_CLIMA: [Cuautitlán]
+
+    Usuario: "Busca papers sobre criptografía post-cuántica"
+    Tú: BUSCAR_ARXIV: [criptografía post-cuántica]
+
+  max_iterations: 3
+  timeout_seconds: 30
+
+use_cases:
+  tutor_socratico:
+    name: "Tutor Socrático"
+    description: "Explica conceptos y guía con preguntas"
+    apis: ["wikipedia"]
+
+  paper_search:
+    name: "Buscador de Papers"
+    description: "Encuentra papers científicos en ArXiv"
+    apis: ["arxiv"]
+
+  weather_assistant:
+    name: "Asistente de Clima"
+    description: "Consulta clima en tiempo real"
+    apis: ["weather"]
+
+  news_factcheck:
+    name: "Verificador de Noticias"
+    description: "Compara fuentes para fact-checking"
+    apis: ["news", "wikipedia"]
+
+  code_assistant:
+    name: "Asistente de Código"
+    description: "Comandos Linux, sintaxis, debugging"
+    apis: ["wikipedia", "duckduckgo"]
+
+  gov_services:
+    name: "Trámites Gobiernos"
+    description: "Info oficial de trámites (México)"
+    apis: ["duckduckgo", "wikipedia"]
